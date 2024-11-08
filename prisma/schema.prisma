@@ -7,33 +7,152 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User {
-  id         Int       @id @default(autoincrement())
-  name       String?
-  email      String    @unique
-  password   String?
-  post Post[]
-  comment Comment[]
-  created_at DateTime  @default(now())
-}
-
-model Post {
-  id            Int       @id @default(autoincrement())
-  user          User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
-  comment       Comment[]
-  user_id       Int
-  title         String
-  description   String
-  comment_count Int       @default(0)
-  created_at    DateTime  @default(now())
-}
-
-model Comment {
-  id         String   @id @default(uuid())
-  post       Post     @relation(fields: [post_id], references: [id], onDelete: Cascade)
-  post_id    Int
-  user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
-  user_id    Int
-  comment    String
+model Practitioner {
+  id         Int      @id @default(autoincrement())
+  first_name String
+  last_name  String
+  username   String   @unique
+  password   String
   created_at DateTime @default(now())
+  updated_at DateTime @default(now())
+}
+
+model Client {
+  id                       Int      @id @default(autoincrement())
+  first_name               String
+  last_name                String
+  date_of_birth            DateTime
+  occupation               String
+  email                    String
+  contact_number           String
+  emergency_contact_number String
+  address                  String
+  city                     String
+  state                    String
+  zip_code                 String
+  created_at               DateTime @default(now())
+  updated_at               DateTime @default(now())
+
+  Appointments          Appointment[]
+  Pictures              AppointmentPictures[]
+  MedicalHistoryVisits  MedicalHistoryVisit[]
+  SkinCareHistoryVisits SkinCareHistoryVisit[]
+  SkinConcernVisits     SkinConcernVisit[]
+}
+
+model MedicalHistoryVisit {
+  id                      Int                       @id @default(autoincrement())
+  clientId                Int
+  otherMedicalCondition   String? //JSON stringified
+  takingMedication        Boolean
+  explainTakingMedication String?
+  haveAllergies           Boolean
+  explainHaveAllergies    String?
+  doesSmoke               Boolean
+  doesDrinking            Boolean
+  created_at              DateTime                  @default(now())
+  updated_at              DateTime                  @default(now())
+  Client                  Client                    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  MedicalConditions       MedicalConditionOnVisit[]
+}
+
+model MedicalConditions {
+  id           Int                       @id @default(autoincrement())
+  name         String
+  MedicalVisit MedicalConditionOnVisit[]
+}
+
+model MedicalConditionOnVisit {
+  medicalHistoryVisitId Int
+  medicalConditionId    Int
+  MedicalHistoryVisit   MedicalHistoryVisit @relation(fields: [medicalHistoryVisitId], references: [id], onDelete: Cascade)
+  MedicalCondition      MedicalConditions   @relation(fields: [medicalConditionId], references: [id], onDelete: Cascade)
+
+  @@id([medicalConditionId, medicalHistoryVisitId])
+}
+
+model SkinCareHistoryVisit {
+  id                                                        Int      @id @default(autoincrement())
+  clientId                                                  Int
+  skinType                                                  SkinType
+  hadFacialOrDermaServicePast30Days                         Boolean
+  usedBleachingRetinaAHAsRetinolPast90Days                  Boolean
+  hadBotoxRestylaneJuvedermCollagenInjectPast6months        Boolean
+  historyOfAccutaneUse                                      Boolean
+  usedTanningBedOrUVExposure                                Boolean
+  explainHadBotoxRestylaneJuvedermCollagenInjectPast6months String?
+  explainHadFacialOrDermaServicePast30Days                  String?
+  explainUsedBleachingRetinaAHAsRetinolPast90Days           String?
+  explainHistoryOfAccutaneUse                               String?
+  explainUsedTanningBedOrUVExposure                         String?
+  skinCareCurrentlyUsing                                    String? //JSON stringified
+  Client                                                    Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+}
+
+model SkinConcernVisit {
+  id                 Int                     @id @default(autoincrement())
+  otherSkinCondition String? //JSON stringified
+  clientId           Int
+  Client             Client                  @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  SkinConditions     SkinConditionsOnVisit[]
+}
+
+model SkinConditionsOnVisit {
+  skinConcernVisitId Int
+  skinConditionsId   Int
+  SkinConcernVisit   SkinConcernVisit @relation(fields: [skinConcernVisitId], references: [id], onDelete: Cascade)
+  SkinCondition      SkinConditions   @relation(fields: [skinConditionsId], references: [id], onDelete: Cascade)
+
+  @@id([skinConcernVisitId, skinConditionsId])
+}
+
+model SkinConditions {
+  id               Int                     @id @default(autoincrement())
+  name             String
+  SkinConcentVisit SkinConditionsOnVisit[]
+}
+
+model Appointment {
+  id                   Int                               @id @default(autoincrement())
+  client_id            Int
+  total_cost           Float
+  paid                 Boolean                           @default(false)
+  Client               Client                            @relation(fields: [client_id], references: [id], onDelete: Cascade)
+  TreatmentsOrServices TreatmentOrServiceOnAppointment[]
+  Pictures             AppointmentPictures[]
+}
+
+model AppointmentPictures {
+  id             Int         @id @default(autoincrement())
+  client_id      Int
+  appointment_id Int
+  image_url      String
+  Appointment    Appointment @relation(fields: [appointment_id], references: [id], onDelete: Cascade)
+  Client         Client      @relation(fields: [client_id], references: [id], onDelete: Cascade)
+}
+
+model TreatmentOrServiceOnAppointment {
+  appointment_id     Int
+  treatment_id       Int
+  TreatmentOrService TreatmentOrService @relation(fields: [treatment_id], references: [id], onDelete: Cascade)
+  Appointment        Appointment        @relation(fields: [appointment_id], references: [id], onDelete: Cascade)
+
+  @@id([appointment_id, treatment_id])
+}
+
+model TreatmentOrService {
+  id           Int                               @id @default(autoincrement())
+  treatment    String
+  amount       Float
+  created_at   DateTime                          @default(now())
+  updated_at   DateTime                          @default(now())
+  Appointments TreatmentOrServiceOnAppointment[]
+}
+
+enum SkinType {
+  NORMAL
+  OILY
+  DRY
+  COMBINATION
+  UNSURE
 }
